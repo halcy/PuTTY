@@ -1059,6 +1059,9 @@ static void pangofont_draw_text(GdkDrawable *target, GdkGC *gc, unifont *font,
     char *utfstring, *utfptr;
     int utflen;
     int shadowbold = FALSE;
+    int onechar = FALSE;
+
+    if (is_rtl(string[0])) onechar = TRUE;
 
     if (wide)
 	cellwidth *= 2;
@@ -1089,6 +1092,8 @@ static void pangofont_draw_text(GdkDrawable *target, GdkGC *gc, unifont *font,
     utfptr = utfstring;
     while (utflen > 0) {
 	int clen, n;
+	clen = utflen;
+	n = len;
 
 	/*
 	 * We want to display every character from this string in
@@ -1115,55 +1120,40 @@ static void pangofont_draw_text(GdkDrawable *target, GdkGC *gc, unifont *font,
 	 */
 
 	/*
-	 * Start by extracting a single UTF-8 character from the
-	 * string.
+	 * First a check, is the string the right length?
+	 * If it's a good size it's probably got a good look too
+	 * and the processing in terminal.h to redraw partially
+	 * overwritten runs makes sure nothing goes too wrong.
+	 *
+	 * But if it's not the right size (even if it's just smaller)
+	 * it's likely that things won't line up between lines.
+	 *
+	 * Note the pango calls are rather slow so we don't really want
+	 * to dynamically check every possible substring.
 	 */
-	clen = 1;
-	while (clen < utflen &&
-	       (unsigned char)utfptr[clen] >= 0x80 &&
-	       (unsigned char)utfptr[clen] < 0xC0)
-	    clen++;
-	n = 1;
 
-        /*
-         * If it's a right-to-left character, we must display it on
-         * its own, to stop Pango helpfully re-reversing our already
-         * reversed text.
-         */
-        if (!is_rtl(string[0])) {
+	if (!onechar) {
+	    pango_layout_set_text(layout, utfptr, clen);
+	    pango_layout_get_pixel_extents(layout, NULL, &rect);
+	    if (rect.width != n * cellwidth && n != 1)
+		onechar = TRUE;
+	}
 
-            /*
-             * See if that character has the width we expect.
-             */
-            pango_layout_set_text(layout, utfptr, clen);
-            pango_layout_get_pixel_extents(layout, NULL, &rect);
+	if (onechar) {
+	    /*
+	     * Must extract a single UTF-8 character from the string.
+	     */
+	    clen = 1;
+	    while (clen < utflen &&
+		   (unsigned char)utfptr[clen] >= 0x80 &&
+		   (unsigned char)utfptr[clen] < 0xC0)
+		clen++;
+	    n = 1;
 
-            if (rect.width == cellwidth) {
-                /*
-                 * Try extracting more characters, for as long as they
-                 * stay well-behaved.
-                 */
-                while (clen < utflen) {
-                    int oldclen = clen;
-                    clen++;		       /* skip UTF-8 introducer byte */
-                    while (clen < utflen &&
-                           (unsigned char)utfptr[clen] >= 0x80 &&
-                           (unsigned char)utfptr[clen] < 0xC0)
-                        clen++;
-                    n++;
-                    pango_layout_set_text(layout, utfptr, clen);
-                    pango_layout_get_pixel_extents(layout, NULL, &rect);
-                    if (rect.width != n * cellwidth) {
-                        clen = oldclen;
-                        n--;
-                        break;
-                    }
-                }
-            }
-        }
+	    pango_layout_set_text(layout, utfptr, clen);
+	    pango_layout_get_pixel_extents(layout, NULL, &rect);
+	}
 
-	pango_layout_set_text(layout, utfptr, clen);
-	pango_layout_get_pixel_extents(layout, NULL, &rect);
 	gdk_draw_layout(target, gc, x + (n*cellwidth - rect.width)/2,
 			y + (pfont->u.height - rect.height)/2, layout);
 	if (shadowbold)
