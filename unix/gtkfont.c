@@ -576,8 +576,10 @@ static void x11font_draw_text(GdkDrawable *target, GdkGC *gdkgc, unifont *font,
 
 	xcs = snewn(len, XChar2b);
 	for (i = 0; i < len; i++) {
-	    xcs[i].byte1 = string[i] >> 8;
-	    xcs[i].byte2 = string[i];
+	    /* This is a 16bit implementation. */
+	    int ucs2 = (string[i] >= 0x10000 ? 0xFFFD : string[i]);
+	    xcs[i].byte1 = ucs2 >> 8;
+	    xcs[i].byte2 = ucs2;
 	}
 
 	x11font_really_draw_text_16(target, xfont->fonts[sfid], gc, x, y,
