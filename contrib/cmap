@@ -1,0 +1,394 @@
+#!/usr/bin/awk -Wexec
+BEGIN{
+    # Putty Default ...
+    l3 = 255; l2 = 187; l1 = 85; l0 = 0;
+    vgatweak = xtermtweak = 0;
+    xtermcursor = 0;
+    quiet = 0;
+    reset = 0;
+    whitebg = 0;
+    testmode = 0;
+    screen = 0;
+    dodefaults = 1;
+    mono = 0;
+    errored = 0;
+
+    if ( ENVIRON["STY"] != "" )
+	screen = 1;
+
+    for(ar=1; ar<ARGC; ar++) {
+	av = ARGV[ar];
+	if (av == "-h") {
+	    quiet = 1;
+	    testmode = 1;
+	    print "Set Linux or PuTTY colour palette"
+	    print "       Default sets the normal PuTTY colour map"
+	    print "       The map can be extracted from a 'reg' or settings file"
+	    print "  -p   PuTTY colours"
+	    print "  -q   Quiet"
+	    print "  -t   Don't change colours, just show the test screen."
+	    print "  -l   Linux console, 16 colours only"
+	    print "  -x   Default XTerm map"
+	    print "  -3   XTerm's map with the tweaks removed."
+	    print "  -w   A selection using the Web safe colours"
+	    print "  -v   The VGA default set."
+	    print "  -b   High brightness colours"
+	    print "  -m   Medium bright (Like VGA without the brown)"
+	    print "  -2   Half bright, result of CGA on some monitors."
+	    print "  -d   Dim colours"
+	    print "  -dd  Very dim colours"
+	    print "  -rv  Reverse video, swap default BG and FG."
+	    print "  -gc  Green cursor"
+	    print "  -mc  Magenta cursor"
+	    print "  -mono Flatten the palette to monochrome"
+	    print "  -s   Add prefix to send through screen(1)"
+	}
+	else if (av == "-q") quiet = 1;
+	else if (av == "-r") reset = 1;
+	else if (av == "-t") testmode = 1;
+	else if (av == "-l") dodefaults = 0;
+	else if (av == "-s") screen = 1;
+	else if (av == "-rv") whitebg = !whitebg;
+	else if (av == "-mc") mc = 1;
+	else if (av == "-gc") gc = 1;
+	else if (av == "-xc") xtermcursor = 1;
+	else if (av == "-mono") mono = 1;
+
+	else if (av == "-x") {	    # XTerm
+	    # The primaries are full and the red3, green3 related levels.
+	    l3 = 255; l2 = 205; l1 = 0; l0 = 0;
+	    # Several tweaks to make the colours look better.
+	    xterm_blue = 238;
+	    xterm_ltblack = 127;
+	    xterm_white3 = 229;
+	    xterm_blue_boost = 92;
+	    xtermtweak = 1;
+	    xtermcursor = 1;
+	    # whitebg = !whitebg; # This is set by the desktop not xterm.
+	}
+
+	else if (av == "-3") {	    # XTerm colour3 base.
+	    l3 = 255; l2 = 205; l1 = 0; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-b") {	    # Bright
+	    l3 = 255; l2 = 255; l1 = 85; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-m") {	    # Medium
+	    l3 = 255; l2 = 170; l1 = 85; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-2") {	    # 50%
+	    l3 = 255; l2 = 128; l1 = 0; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-d") {	    # Dim
+	    l3 = 255; l2 = 102; l1 = 51; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-dd") {    # Very Dim
+	    l3 = 255; l2 = 51; l1 = 51; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-p") {	    # PuTTY
+	    l3 = 255; l2 = 187; l1 = 85; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-w") {	    # Websafe
+	    l3 = 255; l2 = 153; l1 = 51; l0 = 0;
+	    vgatweak = xtermtweak = 0;
+	}
+	else if (av == "-v") {	    # VGA Default
+	    l3 = 255; l2 = 170; l1 = 85; l0 = 0;
+	    vgatweak = 1;
+	}
+	else if (substr(av,1,1) == "-") { # Problem
+	    print "Unknown Option ", av;
+	} else {
+	    got_file = 1;
+	    break;
+	}
+
+	ARGV[ar] = "";
+    }
+    if (!got_file) {ARGC=2; ARGV[1] = "/dev/null";}
+
+    if (!reset)
+    {
+	for(b = 0; b<2; b++) for(g = 0; g<2; g++) for(r = 0; r<2; r++)
+	{
+	    colnum = r * 1 + g * 2 + b * 4;
+
+	    red = r * (l2 - l0) + l0;
+	    green = g * (l2 - l0) + l0;
+	    blue = b * (l2 - l0) + l0;
+
+	    if (vgatweak && colnum == 3) green = l1;
+	    if (xtermtweak && colnum == 4) blue = xterm_blue;
+	    if (xtermtweak && colnum == 7) red = green = blue = xterm_white3;
+
+	    set_palette(colnum, red, green, blue);
+	    if (!whitebg) {
+		if (colnum == 0) set_palette(18, red, green, blue);
+		if (colnum == 7) set_palette(16, red, green, blue);
+		if (colnum == 0 && xtermcursor)
+		    set_palette(20, red, green, blue);
+		if (colnum == 7 && xtermcursor)
+		    set_palette(21, red, green, blue);
+	    } else {
+		if (colnum == 0) set_palette(16, red, green, blue);
+		if (colnum == 7) set_palette(19, red, green, blue);
+		if (colnum == 0 && xtermcursor)
+		    set_palette(21, red, green, blue);
+	    }
+
+	    red = r * (l3 - l1) + l1;
+	    green = g * (l3 - l1) + l1;
+	    blue = b * (l3 - l1) + l1;
+
+	    if (xtermtweak && colnum == 0) red = green = blue = xterm_ltblack;
+	    if (xtermtweak && colnum == 4) red = green = xterm_blue_boost;
+
+	    set_palette(colnum+8, red, green, blue);
+	    if (!whitebg) {
+		if (colnum == 0) set_palette(19, red, green, blue);
+		if (colnum == 7) set_palette(17, red, green, blue);
+	    } else {
+		if (colnum == 0) set_palette(17, red, green, blue);
+		if (colnum == 7) set_palette(18, red, green, blue);
+		if (colnum == 7 && xtermcursor)
+		    set_palette(20, red, green, blue);
+	    }
+	}
+
+	# Cursor colours
+	if (!xtermcursor || mc || gc) {
+	    xtermcursor = 0
+	    set_palette(20, l0, l0, l0);
+	    if (mc)
+		set_palette(21, l3, l0, l3);
+	    else
+		set_palette(21, l0, l3, l0);
+	}
+    }
+}
+
+END{
+    if (has_file && ccount < 8) {
+	print "Too few colour entries found in file"
+	errored = 1;
+    }
+    if (errored) exit;
+    if (mono) flatten_palette();
+
+    if (xtermcursor && (pal_set[16] && pal_set[18])) {
+	set_palette(20, pal_red[18], pal_grn[18], pal_blu[18]);
+	set_palette(21, pal_red[16], pal_grn[16], pal_blu[16]);
+    }
+
+    # Reset palette to configuration.
+    if (!testmode) {
+	if (screen == 1) printf "\033P";
+	if (reset)
+	    printf "\033]R\033\\"
+
+	output_palette();
+	if (!quiet) print ""
+    }
+
+    if (!quiet) colour_chart();
+}
+
+function colour_chart() {
+    print "\033[m\033[H\033[2JColour summary chart"
+    if(!testmode) printf "%52s%14s", "Normal", "Bright"
+    printf "\n"
+    for(b = 0; b<2; b++) for(g = 0; g<2; g++) for(r = 0; r<2; r++)
+    {
+	colnum = r * 1 + g * 2 + b * 4;
+
+	printf "\033[m"
+	printf "%2d ", colnum
+	if (colnum == 0) printf "\033[47m"; else printf "\033[40m";
+	printf "\033[3%dm ### \033[1m ### \033[m ", colnum
+
+	printf "\033[;3%dm ### \033[1m ### \033[m ", colnum
+
+	if (colnum != 7) printf "\033[47m"; else printf "\033[40m";
+	printf "\033[3%dm ### \033[1m ### \033[m ", colnum
+
+	ansi="KRGYBMCW";
+	printf " %c%c%c %c", r?"R":"-", g?"G":"-", b?"B":"-", substr(ansi,colnum+1,1)
+
+	red = pal_red[colnum];
+	green = pal_grn[colnum];
+	blue = pal_blu[colnum];
+	if(!testmode) printf " (%3d,%3d,%3d)", red, green, blue;
+
+	red = pal_red[colnum+8];
+	green = pal_grn[colnum+8];
+	blue = pal_blu[colnum+8];
+	if(!testmode) printf " (%3d,%3d,%3d)", red, green, blue;
+	printf "\n";
+    }
+
+    if (!testmode)
+	for (colnum=0; colnum<2; colnum++) {
+
+	    if (!pal_set[colnum] && !pal_set[colnum+1]) continue;
+
+	    if (colnum == 0) printf "%-28s", "Foreground Curs,Dflt,Bold"
+	    if (colnum == 1) printf "%-28s", "Background Curs,Dflt,Bold"
+
+	    red = pal_red[colnum+20];
+	    green = pal_grn[colnum+20];
+	    blue = pal_blu[colnum+20];
+	    if (pal_set[colnum*2+16])
+		printf " (%3d,%3d,%3d)", red, green, blue;
+	    else if (pal_set[colnum*2+16] || pal_set[colnum*2+16+1])
+		printf "%14s", ""
+
+	    red = pal_red[colnum*2+16];
+	    green = pal_grn[colnum*2+16];
+	    blue = pal_blu[colnum*2+16];
+	    if (pal_set[colnum*2+16])
+		printf " (%3d,%3d,%3d)", red, green, blue;
+	    else if (pal_set[colnum*2+16+1])
+		printf "%14s", ""
+
+	    red = pal_red[colnum*2+16+1];
+	    green = pal_grn[colnum*2+16+1];
+	    blue = pal_blu[colnum*2+16+1];
+	    if (pal_set[colnum*2+16+1])
+		printf " (%3d,%3d,%3d)", red, green, blue;
+
+	    printf "\n";
+	}
+
+    print "Color cube, 6x6x6"
+    for (green = 0; green < 6; green++) {
+	for (red = 0; red < 6; red++) {
+	    for (blue = 0; blue < 6; blue++) {
+		colnum = 16 + (red * 36) + (green * 6) + blue;
+		if (red+green+blue < 9) fgcol = "38;5;231"; else fgcol = "38;5;16";
+		printf "\033[48;5;%dm", colnum
+		printf "\033[%sm\033[8m%02x", fgcol, colnum
+		printf "\033[0m";
+	    }
+	    printf "\033[0m "
+	}
+	printf "\n"
+    }
+
+    print "Grayscale ramp"
+    colnum = 16; fgcol = "38;5;231";
+    printf "\033[48;5;%dm", colnum
+    printf "\033[%sm\033[8m%02x", fgcol, colnum
+    printf "\033[0m";
+    for (colnum = 232; colnum < 256; colnum++) {
+	if (colnum < (256+232)/2) fgcol = "38;5;231"; else fgcol = "38;5;16";
+	printf "\033[48;5;%dm", colnum
+	printf "\033[%sm\033[8m%02x", fgcol, colnum
+	printf "\033[0m";
+    }
+    colnum = 231; fgcol = "38;5;16";
+    printf "\033[48;5;%dm", colnum
+    printf "\033[%sm\033[8m%02x", fgcol, colnum
+    printf "\033[0m";
+    printf "\n";
+}
+
+function set_palette(colnum,red,green,blue) {
+    if (!dodefaults && colnum >= 16) return;
+
+    pal_set[colnum] = 1;
+    pal_red[colnum] = red;
+    pal_grn[colnum] = green;
+    pal_blu[colnum] = blue;
+}
+
+function flatten_palette() {
+    for(colnum = 0; colnum < 22; colnum++) {
+	if (!pal_set[colnum]) continue;
+	red = pal_red[colnum];
+	green = pal_grn[colnum];
+	blue = pal_blu[colnum];
+
+	# grey = 0.3*red + 0.6*green + 0.1*blue
+
+	# PAL
+	grey = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+	# NTSC (Never twice the same color)
+	grey = 0.299 * red + 0.587 * green + 0.114 * blue
+
+	# Mean
+	grey = (red + green + blue)/3
+
+	grey = int(grey)
+	set_palette(colnum, grey, grey, grey)
+    }
+}
+
+function output_palette(colnum,red,green,blue) {
+# Colours for PuTTY, Linux console has first 16.
+# 0..7	    Normal	(KRGYBMCW)
+# 8..15	    Bright/Bold
+# 16	    default foreground
+# 17	    default bold foreground
+# 18	    default background
+# 19	    default bold background
+# 20	    cursor foreground
+# 21	    cursor background
+
+    if (testmode == 1) return;
+
+    for(colnum = 0; colnum < 22; colnum++) {
+	if (!pal_set[colnum]) continue;
+	red = pal_red[colnum];
+	green = pal_grn[colnum];
+	blue = pal_blu[colnum];
+
+	if (colnum < 16)
+	    colcode = sprintf("%x", colnum);
+	else
+	    colcode = sprintf("%c", colnum -16 +71);
+
+	if (screen == 1) printf "\033P";
+	printf "\033]P%s%02x%02x%02x", colcode, red, green, blue
+	printf "\033\\"; # The ST isn't required by Linux ...
+    }
+}
+
+{ has_file=1; }
+/Colour/ {
+    ln=$0
+
+    colnum = ln
+    sub("^.*Colour *", "", colnum);
+    sub("[^0-9].*$", "", colnum);
+
+    entry = ln
+    sub("^.*Colour[^=\\\\]*[\\\\=:][^0-9]*", "", entry);
+    sub("[^0-9]*$", "", entry);
+    cc = split(entry, colour, ",");
+    if (colnum == "") next;
+    if (cc != 3) {
+	print "BAD colour line found:", $0
+	errored = 1
+	next;
+    }
+    ccount++;
+
+    split("16,17,18,19,20,21,0,8,1,9,2,10,3,11,4,12,5,13,6,14,7,15", map, ",");
+    colnum = 0+map[colnum+1];
+
+    if (whitebg && colnum>= 16) {
+	split("18,19,16,17,21,20", map, ",");
+	colnum = 0+map[colnum-15];
+    }
+    if ((xtermcursor || mc || gc) && (colnum == 20 || colnum == 21)) next;
+
+    set_palette(colnum, colour[1], colour[2], colour[3]);
+}
