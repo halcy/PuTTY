@@ -1533,10 +1533,15 @@ void fd_input_func(gpointer data, gint sourcefd, GdkInputCondition condition)
      */
     if (condition & GDK_INPUT_EXCEPTION)
         select_result(sourcefd, 4);
-    if (condition & GDK_INPUT_READ)
-        select_result(sourcefd, 1);
+
     if (condition & GDK_INPUT_WRITE)
         select_result(sourcefd, 2);
+
+    if( gtk_events_pending () )
+	gtk_main_iteration ();
+
+    if (condition & GDK_INPUT_READ)
+        select_result(sourcefd, 1);
 }
 
 void destroy(GtkWidget *widget, gpointer data)
