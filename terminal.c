@@ -1282,6 +1282,8 @@ static void power_on(Terminal *term, int clear)
 	term->curs.y = 0;
     }
     term->curs.x = 0;
+    term->vttest_norevwrap = FALSE;
+    term->vttest_decmodes = FALSE;
     term_schedule_tblink(term);
     term_schedule_cblink(term);
 }
@@ -1598,6 +1600,8 @@ Terminal *term_init(Conf *myconf, struct unicode_data *ucsdata,
     term->cr_lf_return = FALSE;
     term->seen_disp_event = FALSE;
     term->mouse_is_down = FALSE;
+    term->vttest_norevwrap = FALSE;
+    term->vttest_decmodes = FALSE;
     term->reset_132 = FALSE;
     term->cblinker = term->tblinker = 0;
     term->has_focus = 1;
@@ -2536,9 +2540,16 @@ static void toggle_mode(Terminal *term, int mode, int query, int state)
 	    term_schedule_tblink(term);
 	    break;
 	  case 3:		       /* DECCOLM: 80/132 columns */
+	    if (!term->vttest_decmodes) break;
 	    deselect(term);
-	    if (!term->no_remote_resize)
+	    if (!term->no_remote_resize) {
 		request_resize(term->frontend, state ? 132 : 80, term->rows);
+		/* Most applications realise that terminal resizes are
+		 * requests and that you likely won't get what you ask for.
+		 * Programs that use this sequence aren't so smart.
+		 */
+		term_size(term, term->rows, state ? 132 : 80, term->savelines);
+	    }
 	    term->reset_132 = state;
 	    term->alt_t = term->marg_t = 0;
 	    term->alt_b = term->marg_b = term->rows - 1;
@@ -2580,6 +2591,14 @@ static void toggle_mode(Terminal *term, int mode, int query, int state)
 	    compatibility2(OTHER, VT220);
 	    term->cursor_on = state;
 	    seen_disp_event(term);
+	    break;
+	  case 40:		       /* Turn on DECCOLM and friends */
+	    compatibility(OTHER);
+	    term->vttest_decmodes = state;
+	    break;
+	  case 45:		       /* Reverse-wraparound Mode */
+	    compatibility(OTHER);
+	    term->vttest_norevwrap = !state;
 	    break;
 	  case 47:		       /* alternate screen */
 	    compatibility(OTHER);
@@ -3040,15 +3059,16 @@ static void term_out(Terminal *term)
 		}
 		break;
 	      case '\b':	      /* BS: Back space */
-		if (term->curs.x == 0 &&
+		if (term->curs.x == 0 && term->vttest_norevwrap)
+		    /* do nothing */ ;
+		else if (term->curs.x == 0 &&
 		    (term->curs.y == 0 || term->wrap == 0))
 		    /* do nothing */ ;
 		else if (term->curs.x == 0 && term->curs.y > 0)
 		    term->curs.x = term->cols - 1, term->curs.y--;
-		else if (term->wrapnext)
-		    term->wrapnext = FALSE;
-		else
+		else if (!term->wrapnext || term->vttest_norevwrap)
 		    term->curs.x--;
+		term->wrapnext = FALSE;
 		seen_disp_event(term);
 		break;
 	      case '\016':	      /* LS1: Locking-shift one */
