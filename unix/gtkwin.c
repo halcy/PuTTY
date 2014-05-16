@@ -1497,6 +1497,11 @@ static gint timer_trigger(gpointer data)
 	    ticks = 0;
 	else
 	    ticks = next - now;
+
+	/* Might be set in run timers, but we don't want them to multiply! */
+	if (timer_id)
+	    gtk_timeout_remove(timer_id);
+
 	timer_id = gtk_timeout_add(ticks, timer_trigger,
 				   LONG_TO_GPOINTER(next));
     }
