@@ -1,0 +1,137 @@
+For UTF8 Update
+
+    Pull 'compatibility' updates out into own patch
+
+    Should lookahead buffer be a bag (self expanding) ?
+
+    MBCS addition: take note that wchar_t is UTF16 on Windows. ****! ****! ****!
+	Fix mb_to_wc ?
+
+    Other codepages configured from host ?
+
+    wcwidth() is now commonly in the C library (POSIX 2001), this version
+    should be used as the internal one is probably out of date.
+    (Windows, of course, is not compatible)
+
+UTF8 Fonts
+
+    It would appear that there will remain very few fonts that covert the
+    entire unicode range. PuTTY should allow a more general method for
+    selecting fonts for various ranges.
+
+    The best method for specifing these ranges is not clear.
+
+Colours
+
+    XTerm has added a 'truecolor' mode; but it translates to 256 colours.
+    But I want to do more.
+
+    LRU on 240 extra colours in numbers 263..510 ?
+	-- When LRU starts replacing colours they will change.
+
+    Konsole has full 24bit colour support.
+
+    Or could use combining characters to add a colour fixer character. (Hack?)
+
+    Current colours are 9bit, 262 colours.
+    Could add 33bits to extend this to two 25bit values and an extend flag.
+	Breakout bitattr, fgcolour, bgcolour in term structure.
+	-- 3*the current attribute size!
+	    ? Okay for display array?
+		15000 cells * 3 screens (buffer, alternate, display)
+
+	    Current cell is 3 ints. (long,long,int)
+	    New cell 5 ints.	    (chr,attr,bg,fg,cc_next)
+	    Include bitfield compile option
+		currently:  bitattr:9, bg:9, fg:9
+
+	    => Old = 540,000 bytes.
+	    => New = 900,000 bytes.
+
+	Merge this down to 60bits for display array.
+	-- 2*the current attribute size ?
+	    -- 2nd element can contain colour extension bits only.
+
+	    9bits for current flags.
+	    1bit for scrollback compression.
+	    fg:
+		1bit for palette vs tc
+		9bit for palette (or 9bit for 888 colour)
+	    bg:
+		1bit for palette vs tc
+		9bit for palette (or 9bit for 888 colour)
+
+	    = 30 bits.
+	    15bit for each colour in extension word.
+	    = 30 bits
+
+		? Colour extension word in a combining character ?
+		    -- Better scollback compression if real field.
+
+	Reconfigure the scrollback compressor.
+	-- Same as current size ?
+
+    Official way would be to extend termchar by an extra 48 bits ... bit big.
+	Has both 24bit and closest 8bit.
+	-- Both not needed; can *ask* BE if truecolour is acceptable.
+	-- Convert colours to needed format when received.
+
+    SHOULD look for matching palette colour in 16..256 as these cannot change
+    and will shrink the data.
+
+    How to pass to Windows backend ?
+    Decode the colours in terminal.c ?
+
+Portable PuTTY
+
+    Give the Windows version a "-load" flag to load a Unix session file.
+	-- Problem SSH host keys.
+	-? Only one needed per remote, add to session file ?
+	-? Conflict between session host key and system ? Timestamp?
+
+Use TCL for the dialog box.
+
+    Makes the configuration an external app, PuTTY keeps running naturally.
+    Needs IPC to prod putty to reload 'Current Config'.
+	Process termination and file modification time ?
+
+    Get expanding boxes, nice scripting etc etc.
+    Easy, for more people, to modify.
+    Can have 'start and stay open' for config box (AKA real apply button).
+    Dumb replacements too "pterm -e vi $HOME/.putty/tmp/Config.1234"
+
+
+URL: http://www.9bis.net/kitty/
+
+    Big collection of other patches
+
+Dynamic Attributes
+
+    Some attributes don't need interpretation in the display driver as they
+    don't have a unique display 'footprint'. These attributes could be stored
+    only in the current state in the term structure.
+
+    ATTR_BLINK		    Just redraw
+    ATTR_BLINK As BRIGHT    Use different colours
+    ATTR_REVERSE	    Swap the colours
+    ATTR_SELECTION	    Swap the colours again
+    ATTR_DIM		    Use different colours
+    ATTR_CONCEAL	    Use different colours
+    ATTR_BGBOLD             Use different colours
+
+    Some of these would still need representation in the display array
+    in terminal.c, for example ATTR_BLINK needs to get translated to a
+    physical representation on the fly for 'Blink On' and 'Blink Off'.
+
+    Does this mean we want a new ATTR_* set just for terminal.[ch] ?
+
+    Physical attributes:
+	ATTR_FGCOLOUR
+	ATTR_BGCOLOUR
+	ATTR_BOLD
+	ATTR_ULINE
+
+    Semi-physical
+	ATTR_REVERSE/SELECTION
+	ATTR_CONCEAL
+	ATTR_BLINK
