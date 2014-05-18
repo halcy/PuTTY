@@ -166,6 +166,7 @@ char *make_dir_and_check_ours(const char *dirname);
 struct unicode_data;
 int init_ucs(struct unicode_data *ucsdata, char *line_codepage,
 	     int utf8_override, int font_charset, int vtmode);
+#define is_dbcs_leadbyte(x,y) (0) /* We don't do old style DBCS fonts */
 
 /*
  * Spare function exported directly from uxnet.c.
