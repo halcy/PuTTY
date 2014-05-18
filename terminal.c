@@ -1108,6 +1108,12 @@ static void term_timer(void *ctx, unsigned long now)
     Terminal *term = (Terminal *)ctx;
     int update = FALSE;
 
+#ifdef DEBUG_CHARSTREAM
+    debug(("term_timer() TBlink=%d, CBlink=%d, VBell=%d\n",
+	    term->tblink_pending,
+	    term->cblink_pending,
+	    term->in_vbell));
+#endif
     if (term->tblink_pending && now == term->next_tblink) {
 	term->tblinker = !term->tblinker;
 	term->tblink_pending = FALSE;
@@ -3003,6 +3009,10 @@ static void term_out(Terminal *term)
 	    continue;
 	}
 
+#ifdef DEBUG_CHARSTREAM
+	debug(("Char 0x%02x '%c'\n", c, ((c>' '&&c<='~')?c:' ') ));
+#endif
+
 	/* First see about all those translations. */
 	if (in_utf(term) && (c & UNICODE_FLAG) == 0) {
 	    if (c < 0x80) {
@@ -3238,6 +3248,10 @@ static void term_out(Terminal *term)
 
 	/* At this point all character translations are finished. */
 	c &= ~UNICODE_FLAG;
+
+#ifdef DEBUG_CHARSTREAM
+	debug(("Trns 0x%02x '%c'\n", c, ((c>' '&&c<='~')?c:' ') ));
+#endif
 
 	/*
 	 * How about C1 controls? 

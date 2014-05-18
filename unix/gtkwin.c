@@ -2370,6 +2370,32 @@ void do_text(Context ctx, int x, int y, wchar_t *text, int len,
     GdkGC *gc = dctx->gc;
     int widefactor;
 
+#ifdef DEBUG_CHARSTREAM
+    {
+	static int disable_count = 1000;
+	int i;
+	int cset = 0;
+	if (disable_count > 0) {
+	    if (DIRECT_FONT(text[0]) ) cset = text[0] & CSET_MASK;
+	    debug(("do_text(ctx[%d], %d, %d, ", disable_count, x,y));
+	    if (cset == CSET_ACP) debug(("A+"));
+	    else if (cset == CSET_OEMCP) debug(("D+"));
+	    else if (cset != 0) debug(("<U+%2xXX>", cset >> 8));
+	    debug(("\""));
+	    for(i=0;i<len;i++) {
+		int c = text[i] ^ cset;
+		if (c >= ' ' && c <= '~')
+		    debug(("%c", c));
+		else
+		    debug(("<U+%04x>", text[i]));
+	    }
+	    debug(("\", %d, %lx, %x)\n", len,attr,lattr));
+	    if (--disable_count == 0)
+		debug(("do_text logging disabled\n"));
+	}
+    }
+#endif
+
     do_text_internal(ctx, x, y, text, len, attr, lattr);
 
     if (attr & ATTR_WIDE) {

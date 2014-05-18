@@ -340,6 +340,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     HRESULT hr;
     int guess_width, guess_height;
 
+    debug(("Starting\n"));
+
     hinst = inst;
     hwnd = NULL;
     flags = FLAG_VERBOSE | FLAG_INTERACTIVE;
@@ -848,6 +850,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     term_set_focus(term, GetForegroundWindow() == hwnd);
     UpdateWindow(hwnd);
+
+    debug(("Starting Windows message loop\n"));
 
     while (1) {
 	HANDLE *handles;
@@ -3764,6 +3768,32 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
 void do_text(Context ctx, int x, int y, wchar_t *text, int len,
 	     unsigned long attr, int lattr)
 {
+#ifdef DEBUG_CHARSTREAM
+    {
+	static int disable_count = 1000;
+	int i;
+	int cset = 0;
+	if (disable_count > 0) {
+	    if (DIRECT_FONT(text[0]) ) cset = text[0] & CSET_MASK;
+	    debug(("do_text(ctx[%d], %d, %d, ", disable_count, x,y));
+	    if (cset == CSET_ACP) debug(("A+"));
+	    else if (cset == CSET_OEMCP) debug(("D+"));
+	    else if (cset != 0) debug(("<U+%2xXX>", cset >> 8));
+	    debug(("\""));
+	    for(i=0;i<len;i++) {
+		int c = text[i] ^ cset;
+		if (c >= ' ' && c <= '~')
+		    debug(("%c", c));
+		else
+		    debug(("<U+%04x>", text[i]));
+	    }
+	    debug(("\", %d, %lx, %x)\n", len,attr,lattr));
+	    if (--disable_count == 0)
+		debug(("do_text logging disabled\n"));
+	}
+    }
+#endif
+
     if (attr & TATTR_COMBINING) {
 	unsigned long a = 0;
 	int len0 = 1;

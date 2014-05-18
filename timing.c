@@ -112,7 +112,9 @@ unsigned long schedule_timer(int ticks, timer_fn_t fn, void *ctx)
     struct timer *t, *first;
 
     init_timers();
-
+#ifdef DEBUG_TICKER
+    debug(("schedule_timer(%d, %p, %p)\n", ticks, fn, ctx));
+#endif
     now = GETTICKCOUNT();
     when = ticks + now;
 
@@ -142,6 +144,9 @@ unsigned long schedule_timer(int ticks, timer_fn_t fn, void *ctx)
 	 * This timer is the very first on the list, so we must
 	 * notify the front end.
 	 */
+#ifdef DEBUG_TICKER
+	debug(("calling timer_change_notify(%ld)\n", first->now));
+#endif
 	timer_change_notify(first->now);
     }
 
@@ -160,6 +165,9 @@ int run_timers(unsigned long anow, unsigned long *next)
     init_timers();
 
     now = GETTICKCOUNT();
+#ifdef DEBUG_TICKER
+    debug(("run_timer(%ld, ...) at %ld\n", anow, now));
+#endif
 
     while (1) {
 	first = (struct timer *)index234(timers, 0);
@@ -180,6 +188,9 @@ int run_timers(unsigned long anow, unsigned long *next)
 	     * This timer is active and has reached its running
 	     * time. Run it.
 	     */
+#ifdef DEBUG_TICKER
+	    debug(("running timer(%p) for %ld at %ld\n", first->fn, first->now, now));
+#endif
 	    delpos234(timers, 0);
 	    first->fn(first->ctx, first->now);
 	    sfree(first);
@@ -188,6 +199,9 @@ int run_timers(unsigned long anow, unsigned long *next)
 	     * This is the first still-active timer that is in the
 	     * future. Return how long it has yet to go.
 	     */
+#ifdef DEBUG_TICKER
+	    debug(("Waiting for %ld at %ld (%ldms)\n", first->now, now, first->now-now));
+#endif
 	    *next = first->now;
 	    return TRUE;
 	}
