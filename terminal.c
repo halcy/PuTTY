@@ -1239,6 +1239,7 @@ static void power_on(Terminal *term, int clear)
     term->alt_cset = term->cset = term->save_cset = term->alt_save_cset = 0;
     term->alt_utf = term->utf = term->save_utf = term->alt_save_utf = 0;
     term->utf_state = 0;
+    term->width_override = 0;
     term->alt_sco_acs = term->sco_acs =
         term->save_sco_acs = term->alt_save_sco_acs = 0;
     term->cset_attr[0] = term->cset_attr[1] =
@@ -3158,6 +3159,11 @@ static void term_out(Terminal *term)
 		{
 		    termline *cline = scrlineptr(term->curs.y);
 		    int width = 0;
+
+		    if (term->width_override)
+		        width = 1 + (term->width_override & 1);
+		    if (term->width_override & 4)
+		        term->width_override >>= 3;
 		    if (DIRECT_CHAR(c))
 			width = 1;
 		    if (!width)
@@ -4262,6 +4268,10 @@ static void term_out(Terminal *term)
 			compatibility(SCOANSI);
 			term->use_bce = (term->esc_args[0] <= 0);
 			set_erase_char(term);
+			break;
+		      case ANSI('Z', ' '): /* PEC - PRESENTATION EXPAND OR CONTRACT */
+			compatibility(ANSI);
+			term->width_override = term->esc_args[0];
 			break;
 		      case ANSI('p', '"'): /* DECSCL: set compat level */
 			/*
