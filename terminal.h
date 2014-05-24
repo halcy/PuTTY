@@ -102,6 +102,7 @@ struct terminal_tag {
 #endif /* OPTIMISE_SCROLL */
 
     int default_attr, curr_attr, save_attr;
+    unsigned long lastc;	       /* For repeat */
     termchar basic_erase_char, erase_char;
 
     bufchain inbuf;		       /* terminal input buffer */
