@@ -2746,10 +2746,6 @@ static void term_out_litchar(Terminal *term, unsigned long c)
     /* A unicode control char can't get to here ... */
     if (c < ' ') return;
 
-    if (term->width_override)
-	width = 1 + (term->width_override & 1);
-    if (term->width_override & 4)
-	term->width_override >>= 3;
     if (DIRECT_CHAR(c))
 	width = 1;
     if (!width)
@@ -2758,6 +2754,12 @@ static void term_out_litchar(Terminal *term, unsigned long c)
 		 mk_wcwidth((unsigned int) c));
     if (width)
 	term->lastc = c;
+    if (width) {
+	if (term->width_override)
+	    width = 1 + (term->width_override & 1);
+	if (term->width_override & 4)
+	    term->width_override >>= 3;
+    }
     if (term->wrapnext && term->wrap && width > 0) {
 	cline->lattr |= LATTR_WRAPPED;
 	if (term->curs.y == term->marg_b)
