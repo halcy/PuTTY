@@ -3643,7 +3643,7 @@ static void term_out(Terminal *term)
 			term->esc_args[term->esc_nargs - 1] =
 			    10 * term->esc_args[term->esc_nargs - 1] + c - '0';
 		    }
-		} else if (c == ';') {
+		} else if (c == ';' || c == ':') {
 		    if (term->esc_nargs < ARGS_MAX)
 			term->esc_args[term->esc_nargs++] = ARG_DEFAULT;
 		} else if (c < '@') {
