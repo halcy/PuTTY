@@ -113,6 +113,7 @@ static void scroll(Terminal *, int, int, int, int);
 #ifdef OPTIMISE_SCROLL
 static void scroll_display(Terminal *, int, int, int);
 #endif /* OPTIMISE_SCROLL */
+static void set_truecolour_attr(Terminal *, int, int, int, int);
 
 static termline *newline(Terminal *term, int cols, int bce)
 {
@@ -4059,6 +4060,14 @@ static void term_out(Terminal *term)
 					     << ATTR_FGSHIFT);
 					i += 2;
 				    }
+				    if (i+4 < term->esc_nargs &&
+					term->esc_args[i+1] == 2) {
+					set_truecolour_attr(term, 1,
+					    term->esc_args[i+2],
+					    term->esc_args[i+3],
+					    term->esc_args[i+4]);
+					i += 4;
+				    }
 				    break;
 				  case 48:   /* xterm 256-colour mode */
 				    if (i+2 < term->esc_nargs &&
@@ -4068,6 +4077,14 @@ static void term_out(Terminal *term)
 					    ((term->esc_args[i+2] & 0xFF)
 					     << ATTR_BGSHIFT);
 					i += 2;
+				    }
+				    if (i+4 < term->esc_nargs &&
+					term->esc_args[i+1] == 2) {
+					set_truecolour_attr(term, 0,
+					    term->esc_args[i+2],
+					    term->esc_args[i+3],
+					    term->esc_args[i+4]);
+					i += 4;
 				    }
 				    break;
 				}
@@ -6774,5 +6791,46 @@ int term_get_userpass_input(Terminal *term, prompts_t *p,
 	sfree(s);
 	p->data = NULL;
 	return +1; /* all done */
+    }
+}
+
+static void
+set_truecolour_attr(Terminal * term, int fg, int r, int g, int b)
+{
+    /* Annoyingly the 6x6x6 cube that XTerm uses by default (and so our cube)
+     * isn't the websafe colours. This means the standard method of calculating
+     * the best match won't work ... so I'll do a dumb search.
+     */
+    int best_diff = -1, nearest_static = 0;
+    int c;
+    for(c=16; c<256; c++) {
+	int i = c-16, d, this_diff = 0;
+	int nr, ng, nb;
+	if (c<232) {
+	    nr = i / 36; ng = (i / 6) % 6; nb = i % 6;
+	    nr = nr ? nr * 40 + 55 : 0;
+	    ng = ng ? ng * 40 + 55 : 0;
+	    nb = nb ? nb * 40 + 55 : 0;
+	} else {
+	    i = i - 216;
+	    nr=ng=nb = i * 10 + 8;
+	}
+
+	d = nr-r; this_diff += d*d;
+	d = ng-g; this_diff += d*d;
+	d = nb-b; this_diff += d*d;
+
+	if (best_diff<0 || best_diff>this_diff) {
+	    nearest_static = c;
+	    best_diff = this_diff;
+	}
+    }
+
+    if (fg) {
+	term->curr_attr &= ~ATTR_FGMASK;
+	term->curr_attr |= (nearest_static << ATTR_FGSHIFT);
+    } else {
+	term->curr_attr &= ~ATTR_BGMASK;
+	term->curr_attr |= (nearest_static << ATTR_BGSHIFT);
     }
 }
