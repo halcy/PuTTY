@@ -4307,6 +4307,25 @@ static void term_out(Terminal *term)
 			compatibility(ANSI);
 			term->width_override = term->esc_args[0];
 			break;
+		      case ']': /* Linux console control */
+				/* ECMA-48: SDS - START DIRECTED STRING */
+			switch (term->esc_args[0]) {
+			case 1: break; /* Set color n as the underline color */
+			case 2: break; /* Set color n as the dim color */
+			case 8:
+			    /* Make the current color pair the default colors. */
+			    term->default_attr = term->curr_attr;
+			    term->default_attr &= (ATTR_FGMASK | ATTR_BGMASK);
+			    set_erase_char(term);
+			    break;
+			}
+			case 9: break; /* Set screen blank timeout to n minutes. */
+			case 10: break; /* Set bell frequency in Hz. */
+			case 11: break; /* Set bell duration in msec. */
+			case 12: break; /* Bring specified console to the front. */
+			case 13: break; /* Unblank the screen. */
+			case 14: break; /* Set the VESA powerdown interval in minutes. */
+			break;
 		      case ANSI('p', '"'): /* DECSCL: set compat level */
 			/*
 			 * Allow the host to make this emulator a
