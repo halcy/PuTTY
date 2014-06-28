@@ -118,6 +118,10 @@ int init_ucs(struct unicode_data *ucsdata, char *linecharset,
      */
     ucsdata->utf8_locale = 0;
     if (utf8_override) {
+	/* Need to set the locale here because guessing it from the
+	 * envionment is nasty; see:
+	 * http://www.cl.cam.ac.uk/~mgk25/ucs/langinfo.c
+	 */
 	setlocale(LC_CTYPE, "");
 	if (!strcmp("UTF-8", nl_langinfo(CODESET)))
 	    ucsdata->utf8_locale = 1;
