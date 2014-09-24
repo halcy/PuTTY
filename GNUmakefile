@@ -1,7 +1,19 @@
 
-VER=+RdB $(shell date +'%Y-%m-%d')
 SVN=$(shell git log --grep=git-svn-id -1 | awk '/git-svn-id/{v=$$2;sub(".*@","",v);print v+0;}')
-CNF=-j99 VER="-DSNAPSHOT='$(VER)' -DSVN_REV='$(SVN)'"
+
+REMOTE=$(shell git show-ref --hash --head origin/master putty | head -1)
+FORKED=$(shell git merge-base $(REMOTE) HEAD)
+PVER=$(shell git describe --tags --abbrev=0 | sed 's/putty-//')
+MDIF=$(shell git describe --tags --long $(FORKED) | sed 's/.*-\([0-9]*\)-g.*/\1/' )
+RDIF=$(shell git log --oneline --format=%h $(FORKED)..HEAD | wc -l )
+CDATE=$(shell git log -1 --format='%h %ci' | awk '{print $$2;}')
+FDATE=$(shell git log -1 --format='%h %ci' $(FORKED) | awk '{print $$2;}')
+
+BVER=$(shell git describe --tags --abbrev=0 | sed -e 's/putty-//' -e 's/\([0-9]*\)\.\([0-9]*\)/\1,\2,'"$(MDIF),$(RDIF)"'/')
+VER=$(PVER).$(MDIF) $(FDATE) +RdB-$(RDIF) $(CDATE)
+SVER=$(PVER).$(MDIF)+RdB-$(RDIF)
+J99=-j99
+CNF=$(J99) COMPAT="-DVERNAME='$(VER)' -DSHORTVERNAME='$(SVER)'" RCFL="-DVERNAME='$(VER)' -DBINARY_VERSION='$(BVER)'"
 
 WINTGT=/home/samba/public
 WINTOOLPATH32=i686-w64-mingw32-
