@@ -2426,6 +2426,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
 {
     struct draw_ctx *dctx = (struct draw_ctx *)ctx;
     struct gui_data *inst = dctx->inst;
+    int cur_type = inst->term->big_cursor?0:inst->cursor_type;
     GdkGC *gc = dctx->gc;
 
     int active, passive, widefactor;
@@ -2435,7 +2436,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
 	passive = 1;
     } else
 	passive = 0;
-    if ((attr & TATTR_ACTCURS) && inst->cursor_type != 0) {
+    if ((attr & TATTR_ACTCURS) && cur_type != 0) {
 	attr &= ~TATTR_ACTCURS;
         active = 1;
     } else
@@ -2460,7 +2461,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
 	len *= 2;
     }
 
-    if (inst->cursor_type == 0) {
+    if (cur_type == 0) {
 	/*
 	 * An active block cursor will already have been done by
 	 * the above do_text call, so we only need to do anything
@@ -2484,7 +2485,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
 	else
 	    char_width = inst->font_width;
 
-	if (inst->cursor_type == 1) {
+	if (cur_type == 1) {
 	    uheight = inst->fonts[0]->ascent + 1;
 	    if (uheight >= inst->font_height)
 		uheight = inst->font_height - 1;
