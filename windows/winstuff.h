@@ -467,6 +467,10 @@ extern OSVERSIONINFO osVersion;
 BOOL init_winver(void);
 HMODULE load_system32_dll(const char *libname);
 const char *win_strerror(int error);
+#ifndef __MINGW32__
+int strcasecmp(char const* s1, char const* s2);
+int strncasecmp(char const* s1, char const* s2, size_t n);
+#endif
 
 /*
  * Exports from sizetip.c.
