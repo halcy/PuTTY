@@ -456,7 +456,7 @@ if (defined $makefiles{'cygwin'}) {
     &splitline("CFLAGS = -Wall -O2 -std=c90 -D_WINDOWS -D_NO_OLDNAMES " .
 	       (join " ", map {"-I$dirpfx$_"} @srcdirs)) .
 	       "\n".
-    "LDFLAGS = -s\n".
+    "LDFLAGS = -Wl,--nxcompat -Wl,--dynamicbase -s\n".
     &splitline("RCFLAGS = \$(RCINC) --define WIN32=1 --define _WIN32=1 ".
       "--define WINVER=0x0400 ".(join " ", map {"-I$dirpfx$_"} @srcdirs))."\n".
     "\n".
