@@ -10,17 +10,15 @@
 #include <limits.h>
 #include <assert.h>
 
-#ifndef NO_MULTIMON
-#define COMPILE_MULTIMON_STUBS
-#endif
-
 #define PUTTY_DO_GLOBALS	       /* actually _define_ globals */
 #include "putty.h"
 #include "terminal.h"
 #include "storage.h"
 #include "win_res.h"
 
-#ifndef NO_MULTIMON
+#if !defined(NO_MULTIMON) && !defined(NO_MULTIMON_H)
+/* This is needed to provide the stubs for running on Windows 95 */
+#define COMPILE_MULTIMON_STUBS
 #include <multimon.h>
 #endif
 
