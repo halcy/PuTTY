@@ -130,10 +130,6 @@
 # ------------------------------------------------------------
 # Additional text added verbatim to each individual Makefile.
 
-!begin vc vars
-CFLAGS = $(CFLAGS) /DHAS_GSSAPI
-!end
-
 # `make install' target for Unix.
 !begin gtk
 install:
