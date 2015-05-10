@@ -453,10 +453,10 @@ if (defined $makefiles{'cygwin'}) {
     "# You may also need to tell windres where to find include files:\n".
     "# RCINC = --include-dir c:\\cygwin\\include\\\n".
     "\n".
-    &splitline("CFLAGS = -Wall -O2 -std=c90 -D_WINDOWS -D_NO_OLDNAMES " .
+    &splitline("CFLAGS = -Wall -O2 -std=c90 -fstack-protector -D_WINDOWS -D_NO_OLDNAMES " .
 	       (join " ", map {"-I$dirpfx$_"} @srcdirs)) .
 	       "\n".
-    "LDFLAGS = -Wl,--nxcompat -Wl,--dynamicbase -s\n".
+    "LDFLAGS = -static -fstack-protector -Wl,--nxcompat -Wl,--dynamicbase -s\n".
     &splitline("RCFLAGS = \$(RCINC) --define WIN32=1 --define _WIN32=1 ".
       "--define WINVER=0x0400 ".(join " ", map {"-I$dirpfx$_"} @srcdirs))."\n".
     "\n".
