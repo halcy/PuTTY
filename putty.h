@@ -586,8 +586,18 @@ void free_prompts(prompts_t *p);
  * Exports from the front end.
  */
 void request_resize(void *frontend, int, int);
-void do_text(Context, int, int, wchar_t *, int, unsigned long, int);
-void do_cursor(Context, int, int, wchar_t *, int, unsigned long, int);
+typedef struct colinfo {
+	byte tf;
+	byte tb;
+	byte fr;
+	byte fg;
+	byte fb;
+	byte br;
+	byte bg;
+	byte bb;
+} colinfo;
+void do_text(Context, int, int, wchar_t *, int, unsigned long, int, colinfo);
+void do_cursor(Context, int, int, wchar_t *, int, unsigned long, int, colinfo);
 int char_width(Context ctx, int uc);
 #ifdef OPTIMISE_SCROLL
 void do_scroll(Context, int, int, int);
